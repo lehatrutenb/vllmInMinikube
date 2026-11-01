@@ -1,0 +1,31 @@
+FROM python:3.12-slim-trixie
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=ghcr.io/astral-sh/uv:0.13.6 /uv /usr/local/bin/uv
+
+RUN uv venv --python /usr/local/bin/python3 /opt/venv
+
+COPY requirements.txt requirements.txt
+RUN uv pip install --python /opt/venv -r requirements.txt --torch-backend cpu \
+    && rm requirements.txt
+
+ENV PATH="/opt/venv/bin:${PATH}"
+
+COPY patches/request_logger.py request_logger.py
+COPY patches/main.py main.py
+RUN LOGGER_FILE=$(python -c "import vllm.entrypoints.serve.utils.request_logger as m; print(m.__file__)") && \
+    mv request_logger.py ${LOGGER_FILE}
+RUN MAIN_FILE=$(python -c "import vllm.entrypoints.cli.main as m; print(m.__file__)") && \
+    mv main.py ${MAIN_FILE}
+
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod 755 /usr/local/bin/entrypoint.sh
+
+RUN useradd --create-home vllm
+USER vllm
+WORKDIR /home/vllm
+
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
