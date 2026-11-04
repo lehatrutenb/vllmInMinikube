@@ -12,12 +12,12 @@ ENV PATH="/opt/venv/bin:${PATH}"
 
 COPY download_model_weights.py /usr/local/bin/download_model_weights.py
 RUN chmod 755 /usr/local/bin/download_model_weights.py \
-    && useradd --no-create-home vllm \
+    && useradd --no-create-home -u 1000 vllm \
     && mkdir /.hf_home && chown vllm:vllm /.hf_home
 
 ENV HF_HOME=/.hf_home
-ENV MODEL_ID
-ENV MODELS_DIR
+ENV MODEL_ID=Qwen/Qwen2.5-1.5B-Instruct
+ENV MODELS_DIR=/models
 ENV FORCE_DOWNLOAD=0
 
 USER vllm
